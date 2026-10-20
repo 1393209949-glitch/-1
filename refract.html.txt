@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>初中物理 光的反射与折射实验（空气↔水）</title>
+<style>
+*{box-sizing:border-box;font-family:system-ui,Microsoft Yahei}
+body{background:#f5f7fa;padding:16px;margin:0}
+.wrap{max-width:900px;margin:0 auto;background:#fff;padding:20px;border-radius:12px;box-shadow:0 2px 10px #0002}
+.ctrl{display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+canvas{border:1px solid #ccc;background:#fff;width:100%;height:auto}
+.info{margin:8px 0;color:#333}
+button,input[type=range]{cursor:pointer}
+button{padding:6px 12px;border:none;background:#2563eb;color:white;border-radius:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="ctrl">
+    <div>入射角度：<input id="angleSlider" type="range" min="0" max="85" value="40"> <span id="angleVal">40</span>°</div>
+    <button id="switchBtn">切换：空气→水</button>
+  </div>
+  <div class="info">
+    入射角：<span id="iText"></span>｜反射角：<span id="rText"></span>｜折射角：<span id="tText"></span>
+    <div id="tip"></div>
+  </div>
+  <canvas id="cvs" width="840" height="520"></canvas>
+</div>
+<script>
+const cvs=document.getElementById('cvs');
+const ctx=cvs.getContext('2d');
+const slider=document.getElementById('angleSlider');
+const angleVal=document.getElementById('angleVal');
+const switchBtn=document.getElementById('switchBtn');
+const iText=document.getElementById('iText');
+const rText=document.getElementById('rText');
+const tText=document.getElementById('tText');
+const tip=document.getElementById('tip');
+
+let mode=0; // 0:空气→水；1:水→空气
+const nAir=1.00;
+const nWater=1.33;
+let thetaI=40; //入射角(度)
+
+function deg2rad(d){return d*Math.PI/180}
+function rad2deg(r){return r*180/Math.PI}
+
+function draw(){
+  ctx.clearRect(0,0,cvs.width,cvs.height);
+  const cx=cvs.width/2;
+  const cy=cvs.height/2;
+  const L=200;
+  // 界面（水平线）
+  ctx.beginPath();ctx.strokeStyle='#333';ctx.lineWidth=2;
+  ctx.moveTo(cx-320,cy);ctx.lineTo(cx+320,cy);ctx.stroke();
+  ctx.fillText("界面",cx+330,cy+4);
+  // 法线（竖虚线）
+  ctx.beginPath();ctx.strokeStyle='#666';ctx.setLineDash([6,4]);ctx.lineWidth=1.5;
+  ctx.moveTo(cx,cy-240);ctx.lineTo(cx,cy+240);ctx.stroke();
+  ctx.fillText("法线",cx+6,cy-230);
+  ctx.setLineDash([]);
+
+  let n1,n2;
+  if(mode===0){n1=nAir;n2=nWater;}else{n1=nWater;n2=nAir;}
+  const radI=deg2rad(thetaI);
+  let sinT = n1*Math.sin(radI)/n2;
+  let hasRefract=true;
+  let radT;
+  if(Math.abs(sinT)>1){
+    hasRefract=false;
+    tip.textContent="⚠️ 发生全反射，无折射光线";
+    tText.textContent="——";
+  }else{
+    radT=Math.asin(sinT);
+    tip.textContent="";
+    tText.textContent=rad2deg(radT).toFixed(1)+"°";
+  }
+  iText.textContent=thetaI+"°";
+  rText.textContent=thetaI+"°";
+
+  ctx.font="14px sans-serif";
+  // 介质标注
+  ctx.fillStyle='#084';
+  ctx.fillText("空气（n=1.00）",cx-300,cy-200);
+  ctx.fillStyle='#0088cc';
+  ctx.fillText("水（n=1.33）",cx-300,cy+215);
+
+  // 光线绘制工具
+  function ray(x0,y0,ang,len,color,label,off=12){
+    const r=deg2rad(ang);
+    const x1=x0+len*Math.sin(r);
+    const y1=y0-len*Math.cos(r);
+    ctx.beginPath();ctx.strokeStyle=color;ctx.lineWidth=2;
+    ctx.moveTo(x0,y0);ctx.lineTo(x1,y1);ctx.stroke();
+    ctx.fillStyle=color;
+    ctx.fillText(label,x1+off,y1);
+    //箭头简易
+    const ar=deg2rad(ang+160);
+    ctx.beginPath();
+    ctx.moveTo(x1,y1);
+    ctx.lineTo(x1+12*Math.sin(ar),y1-12*Math.cos(ar));
+    ctx.stroke();
+    const ar2=deg2rad(ang-160);
+    ctx.beginPath();
+    ctx.moveTo(x1,y1);
+    ctx.lineTo(x1+12*Math.sin(ar2),y1-12*Math.cos(ar2));
+    ctx.stroke();
+  }
+
+  if(mode===0){
+    // 空气→水：入射在上
+    ray(cx,cy,thetaI,L,'#f24','入射光线');
+    ray(cx,cy,-thetaI,L,'#e69500','反射光线');
+    if(hasRefract) ray(cx,cy,-rad2deg(radT),L,'#2277dd','折射光线');
+  }else{
+    // 水→空气：入射在下，角度向下
+    ray(cx,cy,180-thetaI,L,'#f24','入射光线');
+    ray(cx,cy,180+thetaI,L,'#e69500','反射光线');
+    if(hasRefract) ray(cx,cy,rad2deg(radT),L,'#2277dd','折射光线');
+  }
+
+  // 垂直符号（直角标记）
+  ctx.strokeStyle='#555';ctx.lineWidth=1;
+  const s=14;
+  ctx.beginPath();
+  ctx.moveTo(cx+s,cy);ctx.lineTo(cx+s,cy+s);ctx.lineTo(cx,cy+s);
+  ctx.stroke();
+}
+
+slider.oninput=()=>{
+  thetaI=Number(slider.value);
+  angleVal.textContent=thetaI;
+  draw();
+};
+switchBtn.onclick=()=>{
+  mode=1-mode;
+  if(mode===0) switchBtn.textContent="切换：空气→水";
+  else switchBtn.textContent="切换：水→空气";
+  draw();
+};
+draw();
+</script>
+</body>
+</html>
